@@ -1,0 +1,26 @@
+@startuml
+actor Usuario
+
+usecase "Ver lista de novelas" as UC1
+usecase "Agregar/Editar novela" as UC2
+usecase "Marcar como favorita" as UC3
+usecase "Ver novelas favoritas" as UC4
+usecase "Ver reseñas de novelas" as UC5
+usecase "Agregar reseña" as UC6
+usecase "Ver detalles de la novela" as UC7
+usecase "Configurar tema (claro/oscuro)" as UC8
+
+Usuario --> UC1
+Usuario --> UC2
+Usuario --> UC3
+Usuario --> UC4
+Usuario --> UC5
+Usuario --> UC6
+Usuario --> UC7
+Usuario --> UC8
+
+UC1 .> UC2 : incluye
+UC1 .> UC3 : incluye
+UC4 .> UC3 : incluye
+UC5 .> UC7 : incluye
+@enduml

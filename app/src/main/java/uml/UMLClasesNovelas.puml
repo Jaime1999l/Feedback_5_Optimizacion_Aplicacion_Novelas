@@ -1,0 +1,90 @@
+@startuml
+package com.example.jaime_lopez_novelas_con_fragmentos_widgets {
+
+    class PantallaPrincipalActivity {
+        + onCreate(Bundle): void
+        + refreshFavoritesList(): void
+        - loadNovelsFromFirebase(): void
+        - loadFavoriteNovelsFromFirebase(): void
+    }
+
+    class NovelListFragment {
+        + onCreateView(...): View
+        + onNovelClick(Novel): void
+        + onFavoriteClick(Novel): void
+    }
+
+    class NovelDetailFragment {
+        + onCreateView(...): View
+        - displayNovelDetails(Novel): void
+        - updateFavoriteStatus(Novel): void
+    }
+
+    class NovelWidgetProvider {
+        + onUpdate(...): void
+    }
+
+    class ReviewActivity {
+        + onCreate(Bundle): void
+        - loadAllReviews(): void
+    }
+
+    class AddReviewActivity {
+        + onCreate(Bundle): void
+        - addReview(): void
+    }
+
+    class FavoritesActivity {
+        + onCreate(Bundle): void
+        - displayFavoriteNovels(...): void
+    }
+
+    class AddEditNovelActivity {
+        + onCreate(Bundle): void
+        - saveNovel(): void
+    }
+
+    class ReviewViewModel {
+        + getAllReviews(): LiveData<List<Review>>
+        + addReview(Review): void
+    }
+
+    class NovelViewModel {
+        + getAllNovels(): LiveData<List<Novel>>
+        + updateFavoriteStatus(Novel): void
+    }
+
+    class Novel {
+        - String title
+        - String author
+        - boolean favorite
+    }
+
+    class Review {
+        - String reviewer
+        - String comment
+        - int rating
+    }
+
+    class SQLiteHelper {
+        + addNovel(Novel): void
+        + getAllNovels(): List<Novel>
+        + addReview(Review): void
+    }
+
+    PantallaPrincipalActivity --> NovelListFragment
+    PantallaPrincipalActivity --> NovelDetailFragment
+    PantallaPrincipalActivity --> NovelWidgetProvider
+    PantallaPrincipalActivity --> FavoritesActivity
+    PantallaPrincipalActivity --> AddEditNovelActivity
+    PantallaPrincipalActivity --> ReviewActivity
+    ReviewActivity --> ReviewViewModel
+    AddReviewActivity --> ReviewViewModel
+    FavoritesActivity --> NovelViewModel
+    NovelDetailFragment --> NovelViewModel
+    NovelWidgetProvider --> SQLiteHelper
+    Novel --> SQLiteHelper
+    NovelViewModel --> Novel
+    ReviewViewModel --> Review
+}
+@enduml

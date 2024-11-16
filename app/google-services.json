@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "894402588481",
+    "project_id": "novelas-f-w",
+    "storage_bucket": "novelas-f-w.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:894402588481:android:b86c9cd72fc61d80e27bc0",
+        "android_client_info": {
+          "package_name": "com.example.feedback_5_optimizacion_aplicacion_novelas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_KgghAYNWRUS2WWV6-lul5KOx3voC2Gg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:894402588481:android:65821c5e8a0c5bd9e27bc0",
+        "android_client_info": {
+          "package_name": "com.example.jaime_lopez_novelas_con_fragmentos_widgets"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_KgghAYNWRUS2WWV6-lul5KOx3voC2Gg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
