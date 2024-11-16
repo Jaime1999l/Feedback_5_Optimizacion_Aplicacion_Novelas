@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -20,28 +21,11 @@
         android:layout_height="wrap_content"
         android:text="Autor de la novela" />
 
-    <!-- Imagen de portada de la novela (opcional) -->
+    <!-- Imagen de portada de la novela -->
     <ImageView
         android:id="@+id/image_view_cover"
         android:layout_width="100dp"
         android:layout_height="100dp"
         android:layout_marginTop="8dp"
-        android:src="@drawable/ic_launcher_background" />
-
-    <!-- Botón para agregar/quitar de favoritos -->
-    <Button
-        android:id="@+id/favorite_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Añadir a Favoritos"
-        android:layout_marginTop="8dp" />
-
-    <!-- Botón para generar reseña -->
-    <Button
-        android:id="@+id/review_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Generar Reseña"
-        android:layout_marginTop="4dp" />
-
+        android:src="@drawable/placeholder_image" />
 </LinearLayout>

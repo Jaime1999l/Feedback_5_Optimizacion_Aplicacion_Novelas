@@ -1,5 +1,8 @@
 package com.example.feedback_5_optimizacion_aplicacion_novelas.ui.mainNovel;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.R;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.domain.Novel;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,13 +25,13 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
 
     private List<Novel> novelList = new ArrayList<>();
     private final OnNovelClickListener onNovelClickListener;
+    private final Context context;
 
-    // Constructor recibe la interfaz
-    public NovelAdapter(OnNovelClickListener onNovelClickListener) {
+    public NovelAdapter(OnNovelClickListener onNovelClickListener, Context context) {
         this.onNovelClickListener = onNovelClickListener;
+        this.context = context;
     }
 
-    // Método para actualizar la lista de novelas en el adaptador
     public void setNovels(List<Novel> novels) {
         this.novelList = novels;
         notifyDataSetChanged();
@@ -36,6 +40,7 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
     @NonNull
     @Override
     public NovelHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        // Inflar el diseño del item
         View itemView = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.novel_item, parent, false);
         return new NovelHolder(itemView);
@@ -44,33 +49,32 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
     @Override
     public void onBindViewHolder(@NonNull NovelHolder holder, int position) {
         Novel currentNovel = novelList.get(position);
+
         holder.textViewTitle.setText(currentNovel.getTitle());
         holder.textViewAuthor.setText(currentNovel.getAuthor());
 
+        // Cargar imagen usando Glide o Bitmap
         if (currentNovel.getImageUri() != null && !currentNovel.getImageUri().isEmpty()) {
-            holder.imageViewCover.setVisibility(View.VISIBLE);
-            holder.imageViewCover.setImageURI(Uri.parse(currentNovel.getImageUri()));
+            Bitmap bitmap = decodeSampledBitmapFromUri(Uri.parse(currentNovel.getImageUri()), 100, 100);
+            if (bitmap != null) {
+                holder.imageViewCover.setImageBitmap(bitmap);
+            } else {
+                holder.imageViewCover.setImageResource(R.drawable.error_image);
+            }
         } else {
-            holder.imageViewCover.setVisibility(View.GONE);
+            holder.imageViewCover.setImageResource(R.drawable.placeholder_image);
         }
 
-        // Evento de clic para el título
-        holder.textViewTitle.setOnClickListener(v -> onNovelClickListener.onNovelClick(currentNovel));
-
-        // Evento de clic para el botón de favorito
-        holder.favoriteButton.setText(currentNovel.isFavorite() ? "Eliminar de Favoritos" : "Añadir a Favoritos");
-        holder.favoriteButton.setOnClickListener(v -> onNovelClickListener.onFavoriteClick(currentNovel));
-
-        // Evento de clic para el botón de reseña
-        holder.reviewButton.setOnClickListener(v -> onNovelClickListener.onReviewClick(currentNovel));
+        // Configurar evento de clic para navegar al detalle de la novela
+        holder.itemView.setOnClickListener(v -> onNovelClickListener.onNovelClick(currentNovel));
     }
+
 
     @Override
     public int getItemCount() {
         return novelList.size();
     }
 
-    // Interfaz para manejar clics en el adaptador
     public interface OnNovelClickListener {
         void onNovelClick(Novel novel);
         void onFavoriteClick(Novel novel);
@@ -92,5 +96,56 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
             favoriteButton = itemView.findViewById(R.id.favorite_button);
             reviewButton = itemView.findViewById(R.id.review_button);
         }
+    }
+
+    /**
+     * Decodifica un Bitmap desde un URI con redimensionamiento para evitar problemas de memoria.
+     */
+    private Bitmap decodeSampledBitmapFromUri(Uri uri, int reqWidth, int reqHeight) {
+        try {
+            // Obtener las dimensiones del Bitmap original
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            InputStream inputStream = context.getContentResolver().openInputStream(uri);
+            BitmapFactory.decodeStream(inputStream, null, options);
+            if (inputStream != null) {
+                inputStream.close();
+            }
+
+            // Calcular el inSampleSize
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+
+            // Decodificar el Bitmap con inSampleSize
+            options.inJustDecodeBounds = false;
+            inputStream = context.getContentResolver().openInputStream(uri);
+            Bitmap scaledBitmap = BitmapFactory.decodeStream(inputStream, null, options);
+            if (inputStream != null) {
+                inputStream.close();
+            }
+            return scaledBitmap;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Calcula el inSampleSize para redimensionar un Bitmap.
+     */
+    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        final int height = options.outHeight;
+        final int width = options.outWidth;
+        int inSampleSize = 1;
+
+        if (height > reqHeight || width > reqWidth) {
+            final int halfHeight = height / 2;
+            final int halfWidth = width / 2;
+
+            // Calcular la mayor potencia de 2 que sigue siendo válida
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+        return inSampleSize;
     }
 }

@@ -13,6 +13,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bumptech.glide.Glide;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.R;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.domain.Novel;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.databaseSQL.SQLiteHelper;
@@ -34,7 +35,7 @@ public class AddNovelActivity extends AppCompatActivity {
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     selectedImageUri = result.getData().getData();
-                    imageViewCover.setImageURI(selectedImageUri);
+                    Glide.with(this).load(selectedImageUri).into(imageViewCover);
                 }
             }
     );
@@ -45,7 +46,7 @@ public class AddNovelActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_edit_novel);
 
         db = FirebaseFirestore.getInstance();
-        sqliteHelper = new SQLiteHelper(this);  // Inicializamos SQLiteHelper
+        sqliteHelper = new SQLiteHelper(this);
 
         editTextTitle = findViewById(R.id.edit_text_title);
         editTextAuthor = findViewById(R.id.edit_text_author);
@@ -61,7 +62,6 @@ public class AddNovelActivity extends AppCompatActivity {
         }
 
         buttonSelectImage.setOnClickListener(v -> openGallery());
-
         buttonSave.setOnClickListener(v -> saveNovel());
     }
 
@@ -92,7 +92,6 @@ public class AddNovelActivity extends AppCompatActivity {
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(AddNovelActivity.this, "Novela actualizada", Toast.LENGTH_SHORT).show();
                         sqliteHelper.updateNovel(novel);
-                        setResult(RESULT_OK);  // Indica que la novela fue actualizada
                         finish();
                     })
                     .addOnFailureListener(e -> {
@@ -105,7 +104,6 @@ public class AddNovelActivity extends AppCompatActivity {
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(AddNovelActivity.this, "Novela agregada", Toast.LENGTH_SHORT).show();
                         sqliteHelper.addNovel(novel);
-                        setResult(RESULT_OK);  // Indica que la novela fue añadida
                         finish();
                     })
                     .addOnFailureListener(e -> {
@@ -125,7 +123,7 @@ public class AddNovelActivity extends AppCompatActivity {
                         editTextSynopsis.setText(novel.getSynopsis());
                         if (!TextUtils.isEmpty(novel.getImageUri())) {
                             selectedImageUri = Uri.parse(novel.getImageUri());
-                            imageViewCover.setImageURI(selectedImageUri);
+                            Glide.with(this).load(selectedImageUri).into(imageViewCover);
                         }
                     }
                 });

@@ -52,14 +52,12 @@
             android:paddingVertical="8dp"
             android:textColor="?android:attr/textColorPrimary" />
 
-        <!-- Contenedor para la lista de favoritos -->
-        <LinearLayout
-            android:id="@+id/favorites_layout"
+        <!-- RecyclerView para favoritos -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewFavorites"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="8dp">
-        </LinearLayout>
+            android:layout_marginBottom="16dp" />
 
         <!-- Título de la sección de todas las novelas -->
         <TextView
@@ -73,21 +71,12 @@
             android:paddingVertical="8dp"
             android:textColor="?android:attr/textColorPrimary" />
 
-        <!-- ScrollView para la lista de todas las novelas -->
-        <ScrollView
+        <!-- RecyclerView para la lista de todas las novelas -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewNovels"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:fillViewport="true">
-
-            <LinearLayout
-                android:id="@+id/novels_layout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="8dp">
-            </LinearLayout>
-        </ScrollView>
+            android:layout_weight="1" />
 
         <!-- Contenedor para el fragmento de detalle de novela -->
         <FrameLayout

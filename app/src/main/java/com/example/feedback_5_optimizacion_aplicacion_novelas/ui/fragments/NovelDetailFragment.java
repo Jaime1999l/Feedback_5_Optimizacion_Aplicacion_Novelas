@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -35,6 +36,7 @@ public class NovelDetailFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_novel_detail, container, false);
 
+        // Inicialización de las vistas
         titleTextView = view.findViewById(R.id.text_view_title);
         authorTextView = view.findViewById(R.id.text_view_author);
         synopsisTextView = view.findViewById(R.id.text_view_synopsis);
@@ -44,66 +46,80 @@ public class NovelDetailFragment extends Fragment {
         firebaseFirestore = FirebaseFirestore.getInstance();
         novelViewModel = new ViewModelProvider(this).get(NovelViewModel.class);
 
+        // Obtener el ID de la novela desde los argumentos
         String novelId = getArguments() != null ? getArguments().getString("novelId") : null;
-
-        if (novelId != null) {
-            novelViewModel.getNovelById(novelId).observe(getViewLifecycleOwner(), novel -> {
-                if (novel != null) {
-                    currentNovel = novel;
-                    displayNovelDetails(novel);
-
-                    // Configuración del botón de favoritos
-                    favoriteButton.setText(novel.isFavorite() ? "Eliminar de Favoritos" : "Añadir a Favoritos");
-                    favoriteButton.setOnClickListener(v -> {
-                        novel.setFavorite(!novel.isFavorite());
-                        updateFavoriteStatusInFirebase(novel); // Actualiza en Firebase y el widget
-                        favoriteButton.setText(novel.isFavorite() ? "Eliminar de Favoritos" : "Añadir a Favoritos");
-
-                        // Notificar a PantallaPrincipalActivity para actualizar los favoritos en la UI
-                        if (getActivity() instanceof PantallaPrincipalActivity) {
-                            ((PantallaPrincipalActivity) getActivity()).refreshFavoritesList();
-                        }
-                    });
-
-                    // Configuración del botón de reseña
-                    reviewButton.setOnClickListener(v -> {
-                        Intent intent = new Intent(getActivity(), AddReviewActivity.class);
-                        intent.putExtra("EXTRA_NOVEL_ID", novel.getId());
-                        intent.putExtra("EXTRA_NOVEL_NAME", novel.getTitle());
-                        startActivity(intent);
-                    });
-                }
-            });
+        if (novelId == null) {
+            // Manejo en caso de que el ID de la novela no esté presente
+            titleTextView.setText("No se encontró la novela");
+            return view;
         }
+
+        // Observar cambios en la novela específica
+        novelViewModel.getNovelById(novelId).observe(getViewLifecycleOwner(), novel -> {
+            if (novel == null) {
+                // Mostrar un mensaje si no se encuentra la novela
+                titleTextView.setText("No se encontró la novela");
+                return;
+            }
+
+            currentNovel = novel;
+            displayNovelDetails(novel);
+
+            // Configuración del botón de favoritos
+            favoriteButton.setText(novel.isFavorite() ? "Eliminar de Favoritos" : "Añadir a Favoritos");
+            favoriteButton.setOnClickListener(v -> {
+                novel.setFavorite(!novel.isFavorite());
+                updateFavoriteStatusInFirebase(novel);
+                favoriteButton.setText(novel.isFavorite() ? "Eliminar de Favoritos" : "Añadir a Favoritos");
+            });
+
+            // Configuración del botón de reseña
+            reviewButton.setOnClickListener(v -> {
+                if (getActivity() == null) return;
+                Intent intent = new Intent(getActivity(), AddReviewActivity.class);
+                intent.putExtra("EXTRA_NOVEL_ID", novel.getId());
+                intent.putExtra("EXTRA_NOVEL_NAME", novel.getTitle());
+                startActivity(intent);
+            });
+        });
 
         return view;
     }
 
+    /**
+     * Muestra los detalles de la novela en las vistas correspondientes.
+     */
     private void displayNovelDetails(Novel novel) {
         titleTextView.setText(novel.getTitle());
         authorTextView.setText("Autor: " + novel.getAuthor());
         synopsisTextView.setText(novel.getSynopsis());
     }
 
+    /**
+     * Actualiza el estado de favorito de la novela en Firebase.
+     */
     private void updateFavoriteStatusInFirebase(Novel novel) {
         firebaseFirestore.collection("novelas")
                 .document(novel.getId())
                 .update("favorite", novel.isFavorite())
                 .addOnSuccessListener(aVoid -> {
-                    // Después de que la actualización en Firebase se haya realizado, actualizar el widget y la interfaz
-                    updateWidget();
-
-                    // Llamar a refreshFavoritesList() en PantallaPrincipalActivity si estamos en esa actividad
+                    updateWidget(); // Actualizar el widget después de la actualización
+                    // Actualizar la lista de favoritos si estamos en PantallaPrincipalActivity
                     if (getActivity() instanceof PantallaPrincipalActivity) {
                         ((PantallaPrincipalActivity) getActivity()).refreshFavoritesList();
                     }
                 })
                 .addOnFailureListener(e -> {
+                    // Manejo de errores al actualizar Firebase
                 });
     }
 
+    /**
+     * Envia un broadcast para actualizar el widget.
+     */
     private void updateWidget() {
-        // Enviar un broadcast para actualizar el widget
+        if (getContext() == null) return;
+
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(getContext());
         Intent intent = new Intent(getContext(), NovelWidgetProvider.class);
         intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);

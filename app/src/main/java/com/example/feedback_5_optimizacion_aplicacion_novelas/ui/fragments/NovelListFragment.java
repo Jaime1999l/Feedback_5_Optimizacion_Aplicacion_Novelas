@@ -1,6 +1,7 @@
 // NovelListFragment.java
 package com.example.feedback_5_optimizacion_aplicacion_novelas.ui.fragments;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -25,6 +26,7 @@ public class NovelListFragment extends Fragment implements NovelAdapter.OnNovelC
     private TextView titleTextView, authorTextView, synopsisTextView;
     private Button favoriteButton, reviewButton;
     private NovelViewModel novelViewModel;
+
 
     @Nullable
     @Override
@@ -99,6 +101,17 @@ public class NovelListFragment extends Fragment implements NovelAdapter.OnNovelC
             startActivity(intent);
         }
     }
+
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        if (context instanceof OnNovelSelectedListener) {
+            OnNovelSelectedListener listener = (OnNovelSelectedListener) context;
+        } else {
+            throw new ClassCastException(context.toString() + " must implement OnNovelSelectedListener");
+        }
+    }
+
 
     // Interfaz para manejar la selección de novelas
     public interface OnNovelSelectedListener {
