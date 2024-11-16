@@ -49,11 +49,9 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
     @Override
     public void onBindViewHolder(@NonNull NovelHolder holder, int position) {
         Novel currentNovel = novelList.get(position);
-
         holder.textViewTitle.setText(currentNovel.getTitle());
         holder.textViewAuthor.setText(currentNovel.getAuthor());
 
-        // Cargar imagen usando Glide o Bitmap
         if (currentNovel.getImageUri() != null && !currentNovel.getImageUri().isEmpty()) {
             Bitmap bitmap = decodeSampledBitmapFromUri(Uri.parse(currentNovel.getImageUri()), 100, 100);
             if (bitmap != null) {
@@ -65,7 +63,7 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
             holder.imageViewCover.setImageResource(R.drawable.placeholder_image);
         }
 
-        // Configurar evento de clic para navegar al detalle de la novela
+        // Configurar clic en el ítem para abrir el fragmento de detalles
         holder.itemView.setOnClickListener(v -> onNovelClickListener.onNovelClick(currentNovel));
     }
 
@@ -98,9 +96,6 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
         }
     }
 
-    /**
-     * Decodifica un Bitmap desde un URI con redimensionamiento para evitar problemas de memoria.
-     */
     private Bitmap decodeSampledBitmapFromUri(Uri uri, int reqWidth, int reqHeight) {
         try {
             // Obtener las dimensiones del Bitmap original
@@ -129,9 +124,6 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
         }
     }
 
-    /**
-     * Calcula el inSampleSize para redimensionar un Bitmap.
-     */
     private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
         final int height = options.outHeight;
         final int width = options.outWidth;
@@ -148,4 +140,5 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
         }
         return inSampleSize;
     }
+
 }

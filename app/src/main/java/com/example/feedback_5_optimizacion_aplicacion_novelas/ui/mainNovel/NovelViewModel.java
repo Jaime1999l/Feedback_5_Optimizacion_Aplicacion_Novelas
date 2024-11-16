@@ -1,6 +1,11 @@
 package com.example.feedback_5_optimizacion_aplicacion_novelas.ui.mainNovel;
 
 import android.app.Application;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
@@ -11,10 +16,14 @@ import com.example.feedback_5_optimizacion_aplicacion_novelas.domain.Novel;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class NovelViewModel extends AndroidViewModel {
 
@@ -25,11 +34,14 @@ public class NovelViewModel extends AndroidViewModel {
 
     private DocumentSnapshot lastVisible; // Último documento visible para paginación
     private boolean isLastPage = false; // Verifica si se cargó la última página
+    private ScheduledExecutorService scheduler; // Programador para sincronización periódica
 
     public NovelViewModel(@NonNull Application application) {
         super(application);
         db = FirebaseFirestore.getInstance();
         loadNovels(); // Cargar los datos iniciales
+        monitorBatteryState(application.getApplicationContext()); // Monitorear el estado de la batería
+        schedulePeriodicUpdates(); // Programar actualizaciones periódicas
     }
 
     // Método para obtener todas las novelas
@@ -76,38 +88,30 @@ public class NovelViewModel extends AndroidViewModel {
                 });
     }
 
-    // Método para cargar más novelas (paginación)
-    public void loadMoreNovels() {
-        if (isLastPage || isLoadingLiveData.getValue() != null && isLoadingLiveData.getValue()) {
-            return; // No cargues más si ya estás en la última página o si ya estás cargando
-        }
-
+    // Método para cargar novelas una sola vez
+    private void loadNovelsOnce() {
         isLoadingLiveData.setValue(true);
         db.collection("novelas")
                 .orderBy("title")
-                .startAfter(lastVisible) // Comienza después del último documento visible
-                .limit(20) // Obtén las siguientes 20 novelas
+                .limit(20)
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<Novel> currentList = novelListLiveData.getValue() != null ? novelListLiveData.getValue() : new ArrayList<>();
-                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                        Novel novel = document.toObject(Novel.class);
-                        if (novel != null) {
-                            novel.setId(document.getId());
-                            currentList.add(novel);
+                .addOnSuccessListener(snapshots -> {
+                    if (snapshots != null) {
+                        List<Novel> novelList = new ArrayList<>();
+                        for (DocumentSnapshot document : snapshots) {
+                            Novel novel = document.toObject(Novel.class);
+                            if (novel != null) {
+                                novel.setId(document.getId());
+                                novelList.add(novel);
+                            }
                         }
+                        novelListLiveData.setValue(novelList);
                     }
-
-                    // Actualiza el último documento visible para la próxima carga
-                    if (!querySnapshot.isEmpty()) {
-                        lastVisible = querySnapshot.getDocuments().get(querySnapshot.size() - 1);
-                        isLastPage = querySnapshot.size() < 20;
-                    }
-
-                    novelListLiveData.setValue(currentList);
                     isLoadingLiveData.setValue(false);
-                });
+                })
+                .addOnFailureListener(e -> isLoadingLiveData.setValue(false));
     }
+
 
     // Método para obtener una novela por su ID
     public LiveData<Novel> getNovelById(String novelId) {
@@ -124,14 +128,48 @@ public class NovelViewModel extends AndroidViewModel {
         return novelLiveData;
     }
 
-    // Método para actualizar el estado de favorito de una novela en Firestore
     public void updateFavoriteStatus(Novel novel) {
-        db.collection("novelas").document(novel.getId()).update("favorite", novel.isFavorite())
+        db.collection("novelas").document(novel.getId())
+                .update(
+                        "favorite", novel.isFavorite(),
+                        "imageUri", novel.getImageUri() // Asegúrate de actualizar siempre el URI de la imagen
+                )
                 .addOnSuccessListener(aVoid -> {
-                    // Opcional: Actualiza la lista en tiempo real si es necesario
                 })
-                .addOnFailureListener(e -> {
-                });
+                .addOnFailureListener(Throwable::printStackTrace);
+    }
+
+
+    // Método para programar sincronización periódica
+    private void schedulePeriodicUpdates() {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(() -> loadNovelsOnce(), 0, 15, TimeUnit.MINUTES); // Cada 15 minutos
+    }
+
+    // Monitorear el estado de la batería
+    private void monitorBatteryState(Context context) {
+        IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                float batteryPct = level * 100 / (float) scale;
+
+                if (batteryPct < 20) {
+                    // Reduce la frecuencia de sincronización si la batería está baja
+                    if (scheduler != null && !scheduler.isShutdown()) {
+                        scheduler.shutdownNow();
+                    }
+                    scheduler = Executors.newSingleThreadScheduledExecutor();
+                    scheduler.scheduleAtFixedRate(() -> loadNovelsOnce(), 0, 30, TimeUnit.MINUTES); // Cada 30 minutos
+                } else {
+                    // Restaura la frecuencia de sincronización normal
+                    schedulePeriodicUpdates();
+                }
+            }
+        };
+        context.registerReceiver(batteryReceiver, filter);
     }
 
     @Override
@@ -139,6 +177,9 @@ public class NovelViewModel extends AndroidViewModel {
         super.onCleared();
         if (registration != null) {
             registration.remove();
+        }
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdownNow();
         }
     }
 }

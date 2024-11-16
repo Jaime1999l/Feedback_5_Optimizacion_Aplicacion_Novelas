@@ -1,17 +1,18 @@
 package com.example.feedback_5_optimizacion_aplicacion_novelas;
 
 import android.appwidget.AppWidgetManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.graphics.Typeface;
+import android.os.BatteryManager;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -24,38 +25,27 @@ import com.example.feedback_5_optimizacion_aplicacion_novelas.activity.AddNovelA
 import com.example.feedback_5_optimizacion_aplicacion_novelas.activity.FavoritesActivity;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.activity.ReviewActivity;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.activity.SettingsActivity;
-import com.example.feedback_5_optimizacion_aplicacion_novelas.databaseSQL.SQLiteHelper;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.domain.Novel;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.ui.fragments.NovelDetailFragment;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.ui.fragments.NovelListFragment;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.ui.mainNovel.NovelAdapter;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.ui.mainNovel.NovelViewModel;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.widget.NovelWidgetProvider;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreSettings;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class PantallaPrincipalActivity extends AppCompatActivity implements NovelListFragment.OnNovelSelectedListener {
 
     private DrawerLayout drawerLayout;
-    private FirebaseFirestore db;
     private RecyclerView recyclerViewNovels;
     private RecyclerView recyclerViewFavorites;
-    private List<Novel> novelList;
-    private List<Novel> favoriteNovels;
     private NovelAdapter novelAdapter;
     private NovelAdapter favoriteAdapter;
-    private ExecutorService executorService;
-    private SQLiteHelper sqliteHelper;
     private NovelViewModel novelViewModel;
 
-
-    private static final int ADD_NOVEL_REQUEST_CODE = 1; // Código único para agregar novela
+    private boolean isLowBattery = false;
+    private BroadcastReceiver batteryReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,16 +55,10 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
 
         novelViewModel = new ViewModelProvider(this).get(NovelViewModel.class);
 
-
         // Configuración inicial
-        db = FirebaseFirestore.getInstance();
         drawerLayout = findViewById(R.id.drawer_layout);
         recyclerViewNovels = findViewById(R.id.recyclerViewNovels);
         recyclerViewFavorites = findViewById(R.id.recyclerViewFavorites);
-        sqliteHelper = new SQLiteHelper(this);
-        executorService = Executors.newSingleThreadExecutor();
-        novelList = new ArrayList<>();
-        favoriteNovels = new ArrayList<>();
 
         // Configuración de la imagen de la pantalla principal
         ImageView imageView = findViewById(R.id.home_image);
@@ -89,9 +73,8 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
         // Configurar RecyclerView y Adaptadores
         setupRecyclerViews();
 
-        // Cargar datos
-        loadNovelsFromFirebase();
-        loadFavoriteNovelsFromFirebase();
+        // Monitorear el estado de la batería
+        monitorBatteryState();
     }
 
     private void setupRecyclerViews() {
@@ -106,7 +89,6 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
             public void onFavoriteClick(Novel novel) {
                 // Manejar el cambio de estado de favorito
                 novel.setFavorite(!novel.isFavorite());
-                // Actualizar en Firestore usando el ViewModel
                 novelViewModel.updateFavoriteStatus(novel);
                 refreshFavoritesList();
             }
@@ -118,15 +100,13 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
                 intent.putExtra("EXTRA_NOVEL_ID", novel.getId());
                 startActivity(intent);
             }
-        }, this); // 'this' pasa el contexto actual
+        }, this);
 
         recyclerViewNovels.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewNovels.setAdapter(novelAdapter);
 
         // Observa los datos de las novelas desde el ViewModel
-        novelViewModel.getAllNovels().observe(this, novels -> {
-            novelAdapter.setNovels(novels);
-        });
+        novelViewModel.getAllNovels().observe(this, novels -> novelAdapter.setNovels(novels));
 
         // Configuración del RecyclerView para favoritos
         favoriteAdapter = new NovelAdapter(new NovelAdapter.OnNovelClickListener() {
@@ -137,26 +117,22 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
 
             @Override
             public void onFavoriteClick(Novel novel) {
-                // Manejar el cambio de estado de favorito
                 novel.setFavorite(!novel.isFavorite());
-                // Actualizar en Firestore usando el ViewModel
                 novelViewModel.updateFavoriteStatus(novel);
                 refreshFavoritesList();
             }
 
             @Override
             public void onReviewClick(Novel novel) {
-                // Navegar a la pantalla de reseñas
                 Intent intent = new Intent(PantallaPrincipalActivity.this, ReviewActivity.class);
                 intent.putExtra("EXTRA_NOVEL_ID", novel.getId());
                 startActivity(intent);
             }
-        }, this); // 'this' pasa el contexto actual
+        }, this);
 
         recyclerViewFavorites.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerViewFavorites.setAdapter(favoriteAdapter);
 
-        // Observa los datos de las novelas favoritas desde el ViewModel
         novelViewModel.getAllNovels().observe(this, novels -> {
             List<Novel> favoriteNovels = new ArrayList<>();
             for (Novel novel : novels) {
@@ -168,8 +144,6 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
         });
     }
 
-
-
     private void loadThemePreference() {
         SharedPreferences sharedPreferences = getSharedPreferences("UserPreferences", MODE_PRIVATE);
         boolean isDarkMode = sharedPreferences.getBoolean("dark_mode", false);
@@ -180,7 +154,7 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
         TextView navAddNovel = findViewById(R.id.nav_add_novel);
         navAddNovel.setOnClickListener(v -> {
             Intent intent = new Intent(PantallaPrincipalActivity.this, AddNovelActivity.class);
-            startActivityForResult(intent, ADD_NOVEL_REQUEST_CODE);
+            startActivity(intent);
             drawerLayout.closeDrawers();
         });
 
@@ -206,36 +180,31 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
         });
     }
 
-    private void loadNovelsFromFirebase() {
-        db.collection("novelas").addSnapshotListener((snapshots, e) -> {
-            if (e != null || snapshots == null) return;
-            novelList.clear();
-            for (QueryDocumentSnapshot document : snapshots) {
-                Novel novel = document.toObject(Novel.class);
-                novel.setId(document.getId());
-                novelList.add(novel);
-                sqliteHelper.addNovel(novel);
+    private void monitorBatteryState() {
+        IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        batteryReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                float batteryPct = level * 100 / (float) scale;
+                isLowBattery = batteryPct < 20; // Consideramos batería baja si está por debajo del 20%
             }
-            novelAdapter.setNovels(novelList);
-        });
-    }
-
-    private void loadFavoriteNovelsFromFirebase() {
-        db.collection("novelas").whereEqualTo("favorite", true).addSnapshotListener((snapshots, e) -> {
-            if (e != null || snapshots == null) return;
-            favoriteNovels.clear();
-            for (QueryDocumentSnapshot document : snapshots) {
-                Novel novel = document.toObject(Novel.class);
-                novel.setId(document.getId());
-                favoriteNovels.add(novel);
-            }
-            favoriteAdapter.setNovels(favoriteNovels);
-        });
+        };
+        registerReceiver(batteryReceiver, filter);
     }
 
     public void refreshFavoritesList() {
-        loadFavoriteNovelsFromFirebase();
-        updateWidget();
+        novelViewModel.getAllNovels().observe(this, novels -> {
+            List<Novel> favoriteNovels = new ArrayList<>();
+            for (Novel novel : novels) {
+                if (novel.isFavorite()) {
+                    favoriteNovels.add(novel);
+                }
+            }
+            favoriteAdapter.setNovels(favoriteNovels);
+            updateWidget();
+        });
     }
 
     private void updateWidget() {
@@ -250,27 +219,21 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
     @Override
     public void onNovelSelected(Novel novel) {
         NovelDetailFragment detailFragment = new NovelDetailFragment();
-
-        // Pasar los datos de la novela seleccionada al fragmento
         Bundle args = new Bundle();
         args.putString("novelId", novel.getId());
         detailFragment.setArguments(args);
 
-        // Realizar la transacción del fragmento
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.fragment_container, detailFragment);
         transaction.addToBackStack(null);
         transaction.commit();
     }
 
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (executorService != null) {
-            executorService.shutdownNow();
+        if (batteryReceiver != null) {
+            unregisterReceiver(batteryReceiver);
         }
-        novelList.clear();
-        favoriteNovels.clear();
     }
 }
