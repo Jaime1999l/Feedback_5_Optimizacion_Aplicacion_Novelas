@@ -18,9 +18,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -131,8 +129,7 @@ public class NovelViewModel extends AndroidViewModel {
     public void updateFavoriteStatus(Novel novel) {
         db.collection("novelas").document(novel.getId())
                 .update(
-                        "favorite", novel.isFavorite(),
-                        "imageUri", novel.getImageUri() // Asegúrate de actualizar siempre el URI de la imagen
+                        "favorite", novel.isFavorite()
                 )
                 .addOnSuccessListener(aVoid -> {
                 })

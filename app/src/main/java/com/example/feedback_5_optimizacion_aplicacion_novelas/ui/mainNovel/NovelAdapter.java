@@ -52,17 +52,6 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
         holder.textViewTitle.setText(currentNovel.getTitle());
         holder.textViewAuthor.setText(currentNovel.getAuthor());
 
-        if (currentNovel.getImageUri() != null && !currentNovel.getImageUri().isEmpty()) {
-            Bitmap bitmap = decodeSampledBitmapFromUri(Uri.parse(currentNovel.getImageUri()), 100, 100);
-            if (bitmap != null) {
-                holder.imageViewCover.setImageBitmap(bitmap);
-            } else {
-                holder.imageViewCover.setImageResource(R.drawable.error_image);
-            }
-        } else {
-            holder.imageViewCover.setImageResource(R.drawable.placeholder_image);
-        }
-
         // Configurar clic en el ítem para abrir el fragmento de detalles
         holder.itemView.setOnClickListener(v -> onNovelClickListener.onNovelClick(currentNovel));
     }
@@ -73,72 +62,23 @@ public class NovelAdapter extends RecyclerView.Adapter<NovelAdapter.NovelHolder>
         return novelList.size();
     }
 
+    public Context getContext() {
+        return context;
+    }
+
     public interface OnNovelClickListener {
         void onNovelClick(Novel novel);
-        void onFavoriteClick(Novel novel);
-        void onReviewClick(Novel novel);
     }
 
     public static class NovelHolder extends RecyclerView.ViewHolder {
         private final TextView textViewTitle;
         private final TextView textViewAuthor;
-        private final ImageView imageViewCover;
-        private final Button favoriteButton;
-        private final Button reviewButton;
+
 
         public NovelHolder(@NonNull View itemView) {
             super(itemView);
             textViewTitle = itemView.findViewById(R.id.text_view_title);
             textViewAuthor = itemView.findViewById(R.id.text_view_author);
-            imageViewCover = itemView.findViewById(R.id.image_view_cover);
-            favoriteButton = itemView.findViewById(R.id.favorite_button);
-            reviewButton = itemView.findViewById(R.id.review_button);
         }
     }
-
-    private Bitmap decodeSampledBitmapFromUri(Uri uri, int reqWidth, int reqHeight) {
-        try {
-            // Obtener las dimensiones del Bitmap original
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            InputStream inputStream = context.getContentResolver().openInputStream(uri);
-            BitmapFactory.decodeStream(inputStream, null, options);
-            if (inputStream != null) {
-                inputStream.close();
-            }
-
-            // Calcular el inSampleSize
-            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
-
-            // Decodificar el Bitmap con inSampleSize
-            options.inJustDecodeBounds = false;
-            inputStream = context.getContentResolver().openInputStream(uri);
-            Bitmap scaledBitmap = BitmapFactory.decodeStream(inputStream, null, options);
-            if (inputStream != null) {
-                inputStream.close();
-            }
-            return scaledBitmap;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        final int height = options.outHeight;
-        final int width = options.outWidth;
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-            final int halfHeight = height / 2;
-            final int halfWidth = width / 2;
-
-            // Calcular la mayor potencia de 2 que sigue siendo válida
-            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-        return inSampleSize;
-    }
-
 }

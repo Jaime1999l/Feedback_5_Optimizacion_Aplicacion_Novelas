@@ -6,18 +6,16 @@ public class Novel {
     private String author;
     private int year;
     private String synopsis;
-    private String imageUri;
     private boolean favorite;
 
     public Novel() {
     }
 
-    public Novel(String title, String author, int year, String synopsis, String imageUri) {
+    public Novel(String title, String author, int year, String synopsis) {
         this.title = title;
         this.author = author;
         this.year = year;
         this.synopsis = synopsis;
-        this.imageUri = imageUri;
         this.favorite = false;
     }
 
@@ -59,14 +57,6 @@ public class Novel {
 
     public void setSynopsis(String synopsis) {
         this.synopsis = synopsis;
-    }
-
-    public String getImageUri() {
-        return imageUri;
-    }
-
-    public void setImageUri(String imageUri) {
-        this.imageUri = imageUri;
     }
 
     public boolean isFavorite() {

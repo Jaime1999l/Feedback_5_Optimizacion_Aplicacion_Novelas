@@ -57,14 +57,6 @@
             android:background="?attr/selectableItemBackground"
             android:layout_marginBottom="16dp" />
 
-        <!-- Botón para seleccionar una imagen -->
-        <Button
-            android:id="@+id/button_select_image"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Seleccionar Imagen"
-            android:layout_marginBottom="8dp" />
-
         <!-- Botón para guardar la novela -->
         <Button
             android:id="@+id/button_save"

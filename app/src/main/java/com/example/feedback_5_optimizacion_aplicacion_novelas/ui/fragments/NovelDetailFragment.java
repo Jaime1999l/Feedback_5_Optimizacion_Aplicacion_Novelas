@@ -1,5 +1,6 @@
 package com.example.feedback_5_optimizacion_aplicacion_novelas.ui.fragments;
 
+import android.annotation.SuppressLint;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -29,7 +30,6 @@ public class NovelDetailFragment extends Fragment {
     private Button favoriteButton, reviewButton;
     private NovelViewModel novelViewModel;
     private FirebaseFirestore firebaseFirestore;
-    private Novel currentNovel;
 
     @Nullable
     @Override
@@ -62,7 +62,6 @@ public class NovelDetailFragment extends Fragment {
                 return;
             }
 
-            currentNovel = novel;
             displayNovelDetails(novel);
 
             // Configuración del botón de favoritos
@@ -89,6 +88,7 @@ public class NovelDetailFragment extends Fragment {
     /**
      * Muestra los detalles de la novela en las vistas correspondientes.
      */
+    @SuppressLint("SetTextI18n")
     private void displayNovelDetails(Novel novel) {
         titleTextView.setText(novel.getTitle());
         authorTextView.setText("Autor: " + novel.getAuthor());

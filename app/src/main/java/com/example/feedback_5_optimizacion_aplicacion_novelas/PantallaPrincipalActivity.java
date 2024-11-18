@@ -9,9 +9,11 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -31,6 +33,7 @@ import com.example.feedback_5_optimizacion_aplicacion_novelas.ui.fragments.Novel
 import com.example.feedback_5_optimizacion_aplicacion_novelas.ui.mainNovel.NovelAdapter;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.ui.mainNovel.NovelViewModel;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.widget.NovelWidgetProvider;
+import com.google.firebase.FirebaseApp;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +46,6 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
     private NovelAdapter novelAdapter;
     private NovelAdapter favoriteAdapter;
     private NovelViewModel novelViewModel;
-
     private boolean isLowBattery = false;
     private BroadcastReceiver batteryReceiver;
 
@@ -52,6 +54,8 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
         loadThemePreference();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        FirebaseApp.initializeApp(this);
+
 
         novelViewModel = new ViewModelProvider(this).get(NovelViewModel.class);
 
@@ -75,32 +79,31 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
 
         // Monitorear el estado de la batería
         monitorBatteryState();
+
+        // Obtener los parámetros de la ventana
+        WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
+
+        if (isLowBattery) {
+            // Verificar si el brillo ya está al 70%
+            if (layoutParams.screenBrightness != 0.7f) {
+                // Ajustar el brillo de la pantalla al 70%
+                layoutParams.screenBrightness = 0.7f; // Valor entre 0.0f y 1.0f (70% de brillo)
+                getWindow().setAttributes(layoutParams);
+                Toast.makeText(this, "Batería baja, el brillo se ha reducido para ahorrar energía.", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            // Restaurar el brillo de la pantalla al valor predeterminado
+            if (layoutParams.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+                layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+                getWindow().setAttributes(layoutParams);
+            }
+        }
+
     }
 
     private void setupRecyclerViews() {
         // Configuración del RecyclerView para todas las novelas
-        novelAdapter = new NovelAdapter(new NovelAdapter.OnNovelClickListener() {
-            @Override
-            public void onNovelClick(Novel novel) {
-                onNovelSelected(novel);
-            }
-
-            @Override
-            public void onFavoriteClick(Novel novel) {
-                // Manejar el cambio de estado de favorito
-                novel.setFavorite(!novel.isFavorite());
-                novelViewModel.updateFavoriteStatus(novel);
-                refreshFavoritesList();
-            }
-
-            @Override
-            public void onReviewClick(Novel novel) {
-                // Navegar a la pantalla de reseñas
-                Intent intent = new Intent(PantallaPrincipalActivity.this, ReviewActivity.class);
-                intent.putExtra("EXTRA_NOVEL_ID", novel.getId());
-                startActivity(intent);
-            }
-        }, this);
+        novelAdapter = new NovelAdapter(novel -> onNovelSelected(novel), this);
 
         recyclerViewNovels.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewNovels.setAdapter(novelAdapter);
@@ -109,28 +112,9 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
         novelViewModel.getAllNovels().observe(this, novels -> novelAdapter.setNovels(novels));
 
         // Configuración del RecyclerView para favoritos
-        favoriteAdapter = new NovelAdapter(new NovelAdapter.OnNovelClickListener() {
-            @Override
-            public void onNovelClick(Novel novel) {
-                onNovelSelected(novel);
-            }
+        favoriteAdapter = new NovelAdapter(novel -> onNovelSelected(novel), this);
 
-            @Override
-            public void onFavoriteClick(Novel novel) {
-                novel.setFavorite(!novel.isFavorite());
-                novelViewModel.updateFavoriteStatus(novel);
-                refreshFavoritesList();
-            }
-
-            @Override
-            public void onReviewClick(Novel novel) {
-                Intent intent = new Intent(PantallaPrincipalActivity.this, ReviewActivity.class);
-                intent.putExtra("EXTRA_NOVEL_ID", novel.getId());
-                startActivity(intent);
-            }
-        }, this);
-
-        recyclerViewFavorites.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        recyclerViewFavorites.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewFavorites.setAdapter(favoriteAdapter);
 
         novelViewModel.getAllNovels().observe(this, novels -> {
@@ -180,18 +164,51 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
         });
     }
 
+    /**
+     * Método para monitorear el estado de la batería.
+     */
     private void monitorBatteryState() {
         IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         batteryReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                // Obtener el nivel y la escala de la batería
                 int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
                 int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-                float batteryPct = level * 100 / (float) scale;
-                isLowBattery = batteryPct < 20; // Consideramos batería baja si está por debajo del 20%
+                float batteryPct = (level / (float) scale) * 100;
+
+                // Determinar si la batería está baja (por debajo del 20%)
+                isLowBattery = batteryPct < 20;
+
+                // Ajustar el brillo de la pantalla según el estado de la batería
+                adjustScreenBrightness();
             }
         };
         registerReceiver(batteryReceiver, filter);
+    }
+
+    /**
+     * Método para ajustar el brillo de la pantalla según el estado de la batería.
+     */
+    private void adjustScreenBrightness() {
+        // Obtener los parámetros de la ventana
+        WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
+
+        if (isLowBattery) {
+            // Verificar si el brillo ya está al 70%
+            if (layoutParams.screenBrightness != 0.7f) {
+                // Ajustar el brillo de la pantalla al 70%
+                layoutParams.screenBrightness = 0.7f; // Valor entre 0.0f y 1.0f (70% de brillo)
+                getWindow().setAttributes(layoutParams);
+                Toast.makeText(this, "Batería baja, el brillo se ha reducido para ahorrar energía.", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            // Restaurar el brillo de la pantalla al valor predeterminado
+            if (layoutParams.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+                layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+                getWindow().setAttributes(layoutParams);
+            }
+        }
     }
 
     public void refreshFavoritesList() {
@@ -227,6 +244,29 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
         transaction.replace(R.id.fragment_container, detailFragment);
         transaction.addToBackStack(null);
         transaction.commit();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Obtener los parámetros de la ventana
+        WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
+
+        if (isLowBattery) {
+            // Verificar si el brillo ya está al 70%
+            if (layoutParams.screenBrightness != 0.7f) {
+                // Ajustar el brillo de la pantalla al 70%
+                layoutParams.screenBrightness = 0.7f; // Valor entre 0.0f y 1.0f (70% de brillo)
+                getWindow().setAttributes(layoutParams);
+                Toast.makeText(this, "Batería baja, el brillo se ha reducido para ahorrar energía.", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            // Restaurar el brillo de la pantalla al valor predeterminado
+            if (layoutParams.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+                layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+                getWindow().setAttributes(layoutParams);
+            }
+        }
     }
 
     @Override

@@ -1,16 +1,19 @@
 package com.example.feedback_5_optimizacion_aplicacion_novelas.activity;
 
-import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.view.Gravity;
+import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 
 import com.example.feedback_5_optimizacion_aplicacion_novelas.R;
 import com.example.feedback_5_optimizacion_aplicacion_novelas.domain.Novel;
@@ -39,7 +42,7 @@ public class FavoritesActivity extends AppCompatActivity {
         favoritesLayout = findViewById(R.id.favorites_layout);
         firebaseFirestore = FirebaseFirestore.getInstance();
 
-        // Monitorear el estado de la batería para ajustar la frecuencia de actualizaciones
+        // Monitorear el estado de la batería para ajustar la frecuencia de actualizaciones y el brillo
         monitorBatteryState();
 
         // Cargar las novelas favoritas periódicamente
@@ -65,7 +68,7 @@ public class FavoritesActivity extends AppCompatActivity {
                     displayFavoriteNovels(favoriteNovels);
                 })
                 .addOnFailureListener(e -> {
-                    // Manejar el error
+                    Toast.makeText(this, "Error al cargar las novelas favoritas.", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -73,23 +76,55 @@ public class FavoritesActivity extends AppCompatActivity {
         favoritesLayout.removeAllViews();
 
         if (novels == null || novels.isEmpty()) {
-            TextView noFavoritesTextView = new TextView(this);
-            noFavoritesTextView.setText("No hay novelas favoritas.");
-            favoritesLayout.addView(noFavoritesTextView);
+            Toast.makeText(this, "No tienes novelas favoritas.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         for (Novel novel : novels) {
-            TextView novelView = new TextView(this);
-            novelView.setText(novel.getTitle() + "\n" + novel.getAuthor());
-            novelView.setPadding(16, 16, 16, 16);
-            favoritesLayout.addView(novelView);
+            // Crear un CardView para cada novela
+            CardView cardView = new CardView(this);
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            cardParams.setMargins(16, 16, 16, 16); // Margen entre los CardViews
+            cardView.setLayoutParams(cardParams);
+            cardView.setRadius(12);
+            cardView.setCardElevation(8);
+            cardView.setUseCompatPadding(true);
+
+            // Crear un LinearLayout para contener título y autor
+            LinearLayout cardContent = new LinearLayout(this);
+            cardContent.setOrientation(LinearLayout.VERTICAL);
+            cardContent.setPadding(24, 24, 24, 24);
+
+            // Configurar el título
+            TextView titleText = new TextView(this);
+            titleText.setText(novel.getTitle());
+            titleText.setTextSize(18);
+            titleText.setGravity(Gravity.START);
+            titleText.setTextColor(getResources().getColor(android.R.color.black));
+
+            // Configurar el autor
+            TextView authorText = new TextView(this);
+            authorText.setText("Autor: " + novel.getAuthor());
+            authorText.setTextSize(14);
+            authorText.setGravity(Gravity.START);
+            authorText.setTextColor(getResources().getColor(android.R.color.darker_gray));
+
+            // Agregar el contenido al CardView
+            cardContent.addView(titleText);
+            cardContent.addView(authorText);
+            cardView.addView(cardContent);
+
+            // Agregar el CardView al LinearLayout principal
+            favoritesLayout.addView(cardView);
         }
     }
 
     private void schedulePeriodicFavoriteUpdates() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        int updateInterval = isLowBattery ? 30 : 15; // Ajustar la frecuencia de actualización en minutos
+        int updateInterval = isLowBattery ? 30 : 15;
         scheduler.scheduleAtFixedRate(this::loadFavoriteNovelsFromFirebase, 0, updateInterval, TimeUnit.MINUTES);
     }
 
@@ -105,13 +140,34 @@ public class FavoritesActivity extends AppCompatActivity {
                 boolean wasLowBattery = isLowBattery;
                 isLowBattery = batteryPct < 20;
 
-                if (wasLowBattery != isLowBattery && scheduler != null && !scheduler.isShutdown()) {
-                    scheduler.shutdownNow();
-                    schedulePeriodicFavoriteUpdates(); // Ajustar la frecuencia si el estado de la batería cambia
+                if (wasLowBattery != isLowBattery) {
+                    adjustScreenBrightness();
+
+                    if (scheduler != null && !scheduler.isShutdown()) {
+                        scheduler.shutdownNow();
+                        schedulePeriodicFavoriteUpdates();
+                    }
                 }
             }
         };
         registerReceiver(batteryReceiver, filter);
+    }
+
+    private void adjustScreenBrightness() {
+        WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
+
+        if (isLowBattery) {
+            if (layoutParams.screenBrightness != 0.7f) {
+                layoutParams.screenBrightness = 0.7f;
+                getWindow().setAttributes(layoutParams);
+                Toast.makeText(this, "Batería baja... se ha reducido el brillo.", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            if (layoutParams.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+                layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+                getWindow().setAttributes(layoutParams);
+            }
+        }
     }
 
     @Override

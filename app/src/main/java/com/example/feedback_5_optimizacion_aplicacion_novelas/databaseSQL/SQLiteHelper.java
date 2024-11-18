@@ -16,7 +16,7 @@ import java.util.List;
 public class SQLiteHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "novelasDB";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     public static final String TABLE_NOVELS = "novelas";
     public static final String COLUMN_ID = "id";
@@ -76,7 +76,6 @@ public class SQLiteHelper extends SQLiteOpenHelper {
         values.put(COLUMN_AUTHOR, novel.getAuthor());
         values.put(COLUMN_YEAR, novel.getYear());
         values.put(COLUMN_SYNOPSIS, novel.getSynopsis());
-        values.put(COLUMN_IMAGE_URI, novel.getImageUri());
         values.put(COLUMN_FAVORITE, novel.isFavorite() ? 1 : 0);
 
         db.insertWithOnConflict(TABLE_NOVELS, null, values, SQLiteDatabase.CONFLICT_REPLACE);
@@ -97,7 +96,6 @@ public class SQLiteHelper extends SQLiteOpenHelper {
                 novel.setAuthor(cursor.getString(2));
                 novel.setYear(cursor.getInt(3));
                 novel.setSynopsis(cursor.getString(4));
-                novel.setImageUri(cursor.getString(5));
                 novel.setFavorite(cursor.getInt(6) == 1);
                 novelList.add(novel);
             } while (cursor.moveToNext());
@@ -122,7 +120,6 @@ public class SQLiteHelper extends SQLiteOpenHelper {
                 novel.setAuthor(cursor.getString(cursor.getColumnIndex(COLUMN_AUTHOR)));
                 novel.setYear(cursor.getInt(cursor.getColumnIndex(COLUMN_YEAR)));
                 novel.setSynopsis(cursor.getString(cursor.getColumnIndex(COLUMN_SYNOPSIS)));
-                novel.setImageUri(cursor.getString(cursor.getColumnIndex(COLUMN_IMAGE_URI)));
                 novel.setFavorite(cursor.getInt(cursor.getColumnIndex(COLUMN_FAVORITE)) == 1);
                 favoriteNovels.add(novel);
             } while (cursor.moveToNext());
@@ -142,7 +139,6 @@ public class SQLiteHelper extends SQLiteOpenHelper {
         values.put(COLUMN_AUTHOR, novel.getAuthor());
         values.put(COLUMN_YEAR, novel.getYear());
         values.put(COLUMN_SYNOPSIS, novel.getSynopsis());
-        values.put(COLUMN_IMAGE_URI, novel.getImageUri());
         values.put(COLUMN_FAVORITE, novel.isFavorite() ? 1 : 0);
 
         db.update(TABLE_NOVELS, values, COLUMN_ID + "=?", new String[]{novel.getId()});

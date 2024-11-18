@@ -1,6 +1,7 @@
 // NovelListFragment.java
 package com.example.feedback_5_optimizacion_aplicacion_novelas.ui.fragments;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -70,6 +71,7 @@ public class NovelListFragment extends Fragment implements NovelAdapter.OnNovelC
         return view;
     }
 
+    @SuppressLint("SetTextI18n")
     private void displayNovelDetails(Novel novel) {
         titleTextView.setText(novel.getTitle());
         authorTextView.setText("Autor: " + novel.getAuthor());
@@ -85,31 +87,8 @@ public class NovelListFragment extends Fragment implements NovelAdapter.OnNovelC
     }
 
     @Override
-    public void onFavoriteClick(Novel novel) {
-        // Manejar la acción de favorito
-        novel.setFavorite(!novel.isFavorite());
-        novelViewModel.updateFavoriteStatus(novel);
-    }
-
-    @Override
-    public void onReviewClick(Novel novel) {
-        // Navegar a la actividad de agregar reseña
-        if (getActivity() != null) {
-            Intent intent = new Intent(getActivity(), AddReviewActivity.class);
-            intent.putExtra("EXTRA_NOVEL_ID", novel.getId());
-            intent.putExtra("EXTRA_NOVEL_NAME", novel.getTitle());
-            startActivity(intent);
-        }
-    }
-
-    @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        if (context instanceof OnNovelSelectedListener) {
-            OnNovelSelectedListener listener = (OnNovelSelectedListener) context;
-        } else {
-            throw new ClassCastException(context.toString() + " must implement OnNovelSelectedListener");
-        }
     }
 
 
