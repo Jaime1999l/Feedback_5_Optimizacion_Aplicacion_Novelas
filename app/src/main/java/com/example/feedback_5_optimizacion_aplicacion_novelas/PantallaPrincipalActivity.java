@@ -249,24 +249,7 @@ public class PantallaPrincipalActivity extends AppCompatActivity implements Nove
     @Override
     protected void onResume() {
         super.onResume();
-        // Obtener los parámetros de la ventana
-        WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
-
-        if (isLowBattery) {
-            // Verificar si el brillo ya está al 70%
-            if (layoutParams.screenBrightness != 0.7f) {
-                // Ajustar el brillo de la pantalla al 70%
-                layoutParams.screenBrightness = 0.7f; // Valor entre 0.0f y 1.0f (70% de brillo)
-                getWindow().setAttributes(layoutParams);
-                Toast.makeText(this, "Batería baja, el brillo se ha reducido para ahorrar energía.", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            // Restaurar el brillo de la pantalla al valor predeterminado
-            if (layoutParams.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
-                layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
-                getWindow().setAttributes(layoutParams);
-            }
-        }
+        adjustScreenBrightness();
     }
 
     @Override
